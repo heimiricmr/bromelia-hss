@@ -1,0 +1,61 @@
+version: "3.9"
+services:
+  app:
+    build: ./app/
+    container_name: hss_app-app
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "200M"
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "3870:3870"
+    depends_on:
+      - postgres
+    networks:
+      - network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: hss_app-pgadmin
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./.env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin/storage
+    ports:
+      - "15432:80"
+    networks:
+      - network
+
+  postgres:
+    build: ./postgres/
+    container_name: hss_app-postgres
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./postgres/database:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - network
+
+networks:
+  network: {}

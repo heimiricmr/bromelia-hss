@@ -1,0 +1,24 @@
+# Byte-compiled / optimized
+__pycache__
+*.py[cod]
+
+# VS code
+.vscode
+
+# Virtual Environment
+venv
+
+# Debugging Logs
+*.log
+
+# Testing trace
+*.pcap
+
+# Help folder
+help
+
+# Miscelaneous folder
+misc
+
+# PostgreSQL data
+hss_app/postgres/database
