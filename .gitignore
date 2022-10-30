@@ -7,6 +7,7 @@ __pycache__
 
 # Virtual Environment
 venv
+venv-test
 
 # Debugging Logs
 *.log
@@ -22,3 +23,6 @@ misc
 
 # PostgreSQL data
 hss_app/postgres/database
+
+# Application logs
+logs

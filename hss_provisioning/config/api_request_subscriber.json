@@ -1,0 +1,100 @@
+{
+	"id": "hss_api_request_subscriber",
+	"title": "HSS API Request (Subscriber)",
+    "description": "HSS API Request to handle Subscriber resource",
+	"type": "object",
+	"required": [
+		"identities",
+		"auth",
+		"subscription"
+	],
+	"properties": {
+		"identities": {
+			"type": "object",
+			"required": [
+				"imsi",
+				"msisdn"
+			],
+			"properties": {
+				"imsi": {
+					"type": "string",
+					"pattern": "^[0-9]{15}$"
+				},
+				"msisdn": {
+					"type": "string",
+					"pattern": "^[0-9]{13}$"
+				}
+			},
+			"additionalProperties": false
+		},
+		"auth": {
+			"type": "object",
+			"required": [
+				"key",
+				"opc",
+                "amf",
+                "sqn"
+			],
+			"properties": {
+				"key": {
+					"type": "string",
+					"pattern": "^[0-9A-F]{32}$|^[0-9a-f]{32}$"
+				},
+				"opc": {
+					"type": "string",
+					"pattern": "^[0-9A-F]{32}$|^[0-9a-f]{32}$"
+				},
+				"amf": {
+					"type": "string",
+					"pattern": "^[0-9A-F]{4}$|^[0-9a-f]{4}$"
+				},
+				"sqn": {
+					"type": "string",
+					"pattern": "^[0-9A-F]{12}$|^[0-9a-f]{12}$"
+				}
+			},
+			"additionalProperties": false
+		},
+		"subscription": {
+			"type": "object",
+			"required": [
+				"schar",
+				"default_apn",
+				"apns"
+			],
+			"properties": {
+				"stn_sr": {
+					"type": "string",
+					"pattern": "^[0-9]{13}$"
+				},
+				"roaming_allowed": {
+					"type": "boolean"
+				},
+				"schar": {
+					"type": "integer"
+				},
+				"max_req_bw_ul": {
+					"type": "integer"
+				},
+				"max_req_bw_dl": {
+					"type": "integer"
+				},
+				"default_apn": {
+					"type": "integer"
+				},
+				"odb": {
+					"type": "string",
+					"enum": ["ODB-all-APN", "ODB-HPLMN-APN", "ODB-VPLMN-APN"]
+				},
+				"apns": {
+					"type": "array",
+					"items": {
+						"type": "integer"
+					}
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

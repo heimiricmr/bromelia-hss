@@ -1,0 +1,13 @@
+{
+    "id": "hss_api_response_subscriber",
+    "title": "HSS API Response (Subscriber)",
+    "description": "HSS API Response to handle Subscriber resource",
+    "type": "object",
+    "required": ["error_message"],
+    "properties": {
+        "error_message": {
+            "type": "string"
+            }
+    },
+    "additionalProperties": false
+}

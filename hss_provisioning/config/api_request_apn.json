@@ -1,0 +1,40 @@
+{
+    "id": "hss_api_request_apn",
+    "title": "HSS API Request (APN)",
+    "description": "HSS API Request to handle APN resource",
+    "type": "object",
+    "required": [
+        "apn_id",
+        "apn_name",
+        "pdn_type",
+        "qci",
+        "priority_level",
+        "max_req_bw_ul",
+        "max_req_bw_dl"
+    ],
+    "properties": {
+        "apn_id": {
+            "type": "integer"
+        },
+        "apn_name": {
+            "type": "string"
+        },
+        "pdn_type": {
+            "type": "string",
+            "enum": ["IPv4", "IPv6", "IPv4v6", "IPv4orIPv6"]
+        },
+        "qci": {
+            "type": "integer"
+        },
+        "priority_level": {
+            "type": "integer"
+        },
+        "max_req_bw_ul": {
+            "type": "integer"
+        },
+        "max_req_bw_dl": {
+            "type": "integer"
+        }
+    },
+    "additionalProperties": false
+}
