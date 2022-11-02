@@ -4,10 +4,12 @@ __pycache__
 
 # VS code
 .vscode
+*.code-workspace
 
 # Virtual Environment
 venv
 venv-test
+venv-dev
 
 # Debugging Logs
 *.log
@@ -20,9 +22,21 @@ help
 
 # Miscelaneous folder
 misc
+__misc__
 
 # PostgreSQL data
 hss_app/postgres/database
+*.sql
 
 # Application logs
 logs
+
+# macOS files
+.DS_Store
+
+# Git misc
+.gitattributes
+
+# Redis data
+cache
+*.rdb

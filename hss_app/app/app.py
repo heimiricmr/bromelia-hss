@@ -439,8 +439,8 @@ def ulr(request: ULR) -> ULA:
     if is_new_mme_identity(request, subscriber):
         #: test__ulr_route__6__diameter_success__with_cancel_location_request
         clr = app.s6a.CLR(user_name=imsi,
-                              cancellation_type=CANCELLATION_TYPE_MME_UPDATE_PROCEDURE,
-                              destination_host=subscriber.mme_hostname)
+                          cancellation_type=CANCELLATION_TYPE_MME_UPDATE_PROCEDURE,
+                          destination_host=subscriber.mme_hostname)
 
         app.send_message(clr, recv_answer=False)
         app_logger.debug(f"[{hbh}] Sent CLR to MME")
