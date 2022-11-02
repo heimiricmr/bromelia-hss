@@ -126,11 +126,11 @@ def update_mip6_agent_info_eps_subscription_profile(imsi: str, profile: dict) ->
                                 Subscriber.imsi==imsi
                             ).one_or_none()
 
-        mip6 = list(filter(lambda mip6: mip6.context_id == profile["context_id"], subscriber.mip6s))[0]
+        mip6 = list(filter(lambda mip6: mip6.context_id == profile["context_id"], subscriber.mip6s))
 
-        if mip6 is not None:
-            setattr(mip6, "destination_host", profile["destination_host"])
-            setattr(mip6, "destination_realm", profile["destination_realm"])
+        if mip6:
+            setattr(mip6[0], "destination_host", profile["destination_host"])
+            setattr(mip6[0], "destination_realm", profile["destination_realm"])
 
 
 def update_mme_info_eps_subscription_profile(imsi: str, profile: dict) -> None:
