@@ -25,7 +25,7 @@ from bromelia.lib.etsi_3gpp_s6a import ULA # UpdateLocationAnswer
 from bromelia.lib.etsi_3gpp_s6a import ULR # UpdateLocationRequest
 from bromelia.exceptions import *
 
-from config import *
+from config import Config
 from counters import app_counterdb
 from models import (
     get_eps_subscription_profile,
@@ -56,7 +56,7 @@ from utils import (
 
 app_logger = logging.getLogger("3gpp_hss")
 
-app = Bromelia(config_file=config_file)
+app = Bromelia(config_file=Config.config_file)
 
 #: Application initialization
 msgs = [AIA, AIR, CLA, CLR, NOA, NOR, PUA, PUR, ULA, ULR]

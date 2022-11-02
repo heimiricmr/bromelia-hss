@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
   gcc \
   && rm -rf /var/lib/apt/lists/*
 
-COPY app.py boot.sh counters.py entrypoint.py milenage.py models.py requirements.txt utils.py ./
-COPY config_docker.py config.py
+COPY app.py config.py counters.py entrypoint.py milenage.py models.py utils.py ./
+COPY boot.sh requirements.txt ./
 COPY config_docker.yaml config.yaml
 
 RUN python -m venv venv

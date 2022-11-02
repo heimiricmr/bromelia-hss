@@ -9,14 +9,14 @@
     :license: MIT, see LICENSE for more details.
 """
 
-from config import *
+from config import Config
 
 from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy import BigInteger, Column, Integer, LargeBinary, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship, sessionmaker
 
-engine = create_engine(database_uri, echo=True)
+engine = create_engine(Config.SQL_BASE_URI, echo=True)
 Session = sessionmaker(bind=engine, expire_on_commit=False)
 Base = declarative_base()
 
