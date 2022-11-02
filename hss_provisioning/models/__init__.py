@@ -28,10 +28,10 @@ from sqlalchemy.orm import (
     sessionmaker
 )
 
-from config import *
+from config import Config
 
 
-engine = create_engine(SQL_BASE_URI, echo=True)
+engine = create_engine(Config.SQL_BASE_URI, echo=True)
 Session = sessionmaker(bind=engine, expire_on_commit=False)
 Base = declarative_base()
 

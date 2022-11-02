@@ -19,11 +19,7 @@ from flask import (
 from jsonschema import validate
 
 from constants import *
-from config import (
-	request_schema_apn,
-	request_schema_subscriber, 
-	response_schema_subscriber
-)
+from config import Config
 
 
 def get_json_content(request):
@@ -57,13 +53,13 @@ def schema_validation(transaction, transaction_type):
 	"""
 
 	if (transaction_type == "subscriber-request"):
-		schema = request_schema_subscriber
+		schema = Config.request_schema_subscriber
 
 	elif (transaction_type == "subscriber-response"):
-		schema = response_schema_subscriber
+		schema = Config.response_schema_subscriber
 
 	if (transaction_type == "apn-request"):
-		schema = request_schema_apn
+		schema = Config.request_schema_apn
 
 	try:
 		validate(transaction, schema)

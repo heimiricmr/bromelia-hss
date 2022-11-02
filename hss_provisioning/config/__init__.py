@@ -13,6 +13,7 @@
 import datetime
 import json
 import logging
+import socket
 import os
 
 
@@ -21,20 +22,54 @@ config_dir = os.path.dirname(os.path.abspath(__file__))
 base_dir = os.path.dirname(config_dir)
 logging_dir = os.path.join(base_dir, "logs")
 
-#: SQLAlchemy and PostgreSQL configurations
-SECRET_KEY = "you-will-never-guess"
-db = {
-        "user": "postgres",
-        "pw": "1234HssPostgres!", 
-        "url": "localhost:5432",
-        "db": "subscribers"
-}
 
-SQL_BASE_URI = "postgresql+psycopg2://{user}:{pw}@{url}/{db}?client_encoding=utf8".format(**db)
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
 
-SQLALCHEMY_BINDS = {
-    "hss": SQL_BASE_URI.format(**db),
-}
+
+def get_database_user():
+    if os.getenv("POSTGRES_USER"):
+        print("Found POSTGRES_USER env variable")
+        return os.getenv("POSTGRES_USER")
+    print("Not found POSTGRES_USER env variable, fallback to default ...")
+    return "postgres"
+
+
+def get_database_password():
+    if os.getenv("POSTGRES_PASSWORD"):
+        print("Found POSTGRES_PASSWORD env variable")
+        return os.getenv("POSTGRES_PASSWORD")
+    print("Not found POSTGRES_PASSWORD env variable, fallback to default ...")
+    return "1234HssPostgres!"
+
+
+def get_database_url():
+    try:
+        postgres_hostname = socket.gethostbyname_ex("hss_app-postgres")
+        print("Found hss_app-postgres FQDN")
+        return "hss_app-postgres:5432"
+
+    except socket.gaierror:
+        print("Not found hss_app-postgres FQDN, fallback to default ...")
+        return "127.0.0.1:5432"
+
+
+def get_database_db():
+    if os.getenv("POSTGRES_DB"):
+        print("Found POSTGRES_DB env variable")
+        return os.getenv("POSTGRES_DB")
+    print("Not found POSTGRES_DB env variable, fallback to default ...")
+    return "subscribers"
+
+
+def get_host_ip_address():
+    if is_docker():
+        return "0.0.0.0"
+    return "localhost"
 
 
 def get_logging_filename():
@@ -57,35 +92,55 @@ def get_json_repr(filepath):
         return json.load(json_file)
 
 
-#: JSON API Schema - Request & Response.
-request_schema_subscriber = get_json_repr(
-    os.path.join(config_dir, "api_request_subscriber.json")
-)
+class Config:
+    #: Network Configuration
+    HOST = get_host_ip_address()
+    PORT = 5001
 
-response_schema_subscriber = get_json_repr(
-    os.path.join(config_dir, "api_response_subscriber.json")
-)
+    #: SQLAlchemy and PostgreSQL configurations
+    SECRET_KEY = "you-will-never-guess"
 
-request_schema_apn = get_json_repr(
-    os.path.join(config_dir, "api_request_apn.json")
-)
+    params = {
+        "user": get_database_user(), 
+        "pw": get_database_password(), 
+        "url": get_database_url(), 
+        "db": get_database_db()
+    }
 
+    SQL_BASE_URI = "postgresql+psycopg2://{user}:{pw}@{url}/{db}?client_encoding=utf8".format(**params)
 
-#: Logging setup.
-logging_filename = get_logging_filename()
+    SQLALCHEMY_BINDS = {
+        "hss": SQL_BASE_URI.format(**params),
+    }
 
-LOGGING_LEVEL = logging.DEBUG
+    #: JSON API Schema - Request & Response.
+    request_schema_subscriber = get_json_repr(
+        os.path.join(config_dir, "api_request_subscriber.json")
+    )
 
-LOGGING_FORMAT = "%(asctime)s [%(levelname)s] [%(process)d] "\
-                "[%(thread)d:%(threadName)s] %(module)s [%(name)s] "\
-                "[%(funcName)s]: %(message)s"
+    response_schema_subscriber = get_json_repr(
+        os.path.join(config_dir, "api_response_subscriber.json")
+    )
 
-if not os.path.exists(logging_dir):
-    os.mkdir(logging_dir)
+    request_schema_apn = get_json_repr(
+        os.path.join(config_dir, "api_request_apn.json")
+    )
 
-LOGGING_PATH = os.path.join(logging_dir, f"{logging_filename}")
+    #: Logging setup.
+    logging_filename = get_logging_filename()
 
-logging.basicConfig(level=LOGGING_LEVEL,
-                    format=LOGGING_FORMAT,
-                    filename=LOGGING_PATH,
-                    filemode="a")
+    LOGGING_LEVEL = logging.DEBUG
+
+    LOGGING_FORMAT = "%(asctime)s [%(levelname)s] [%(process)d] "\
+                     "[%(thread)d:%(threadName)s] %(module)s [%(name)s] "\
+                     "[%(funcName)s]: %(message)s"
+
+    if not os.path.exists(logging_dir):
+        os.mkdir(logging_dir)
+
+    LOGGING_PATH = os.path.join(logging_dir, f"{logging_filename}")
+
+    logging.basicConfig(level=LOGGING_LEVEL,
+                        format=LOGGING_FORMAT,
+                        filename=LOGGING_PATH,
+                        filemode="a")

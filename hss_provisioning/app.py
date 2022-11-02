@@ -13,7 +13,7 @@ from flask import Flask
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 
-from config import *
+from config import Config
 from routes import *
 
 session = Session()
@@ -28,8 +28,8 @@ def setup_routes(app):
 def create_app():
 	app = Flask(__name__)
 	app.config.update(
-		SECRET_KEY=SECRET_KEY,
-		SQLALCHEMY_BINDS=SQLALCHEMY_BINDS,
+		SECRET_KEY=Config.SECRET_KEY,
+		SQLALCHEMY_BINDS=Config.SQLALCHEMY_BINDS,
 	)
 
 	setup_routes(app)
