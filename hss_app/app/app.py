@@ -26,6 +26,7 @@ from bromelia.lib.etsi_3gpp_s6a import ULR # UpdateLocationRequest
 from bromelia.exceptions import *
 
 from config import *
+from counters import app_counterdb
 from models import (
     get_eps_subscription_profile,
     update_mip6_agent_info_eps_subscription_profile,
@@ -71,6 +72,7 @@ def air(request: AIR) -> AIA:
 
     :returns: AuthenticationInformationAnswer object
     """
+    app_counterdb.incr("air:num_requests")
 
     hbh = request.header.hop_by_hop.hex()
     r = ResponseGenerator(request, proxy_response=app.s6a.AIA)
@@ -81,11 +83,13 @@ def air(request: AIR) -> AIA:
 
     except DiameterMissingAvp as e:
         #: test__air_route__0__diameter_missing_user_name_avp
+        app_counterdb.incr("air:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
     except DiameterInvalidAvpValue as e:
         #: test__air_route__1__diameter_invalid_user_name_avp_value
+        app_counterdb.incr("air:num_answers:invalid_avp_value")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.invalid_avp_value(msg=e.args[0], avp=request.user_name_avp)
 
@@ -96,6 +100,7 @@ def air(request: AIR) -> AIA:
 
     except DiameterMissingAvp as e:
         #: test__air_route__2__diameter_missing_visited_plmn_id_avp
+        app_counterdb.incr("air:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get visited PLMN: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
@@ -106,6 +111,7 @@ def air(request: AIR) -> AIA:
                          f"vectors: {num_of_requested_vectors}")
 
     except DiameterMissingAvp as e:
+        app_counterdb.incr("air:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get the number of "\
                              f"requested vectors: {e.args[0]}")
 
@@ -122,6 +128,7 @@ def air(request: AIR) -> AIA:
 
     if subscriber is None:
         #: test__air_route__3__diameter_error_user_unknown
+        app_counterdb.incr("air:num_answers:user_unknown")
         app_logger.debug(f"[{hbh}] Unknown subscriber: {imsi}")
         return r.user_unknown()
 
@@ -151,6 +158,7 @@ def air(request: AIR) -> AIA:
     if num_of_vectors >= 5:
         #: test__air_route__9__diameter_authentication_data_unavailable__too_much_immediate_response_preferred
         #: test__air_route__10__diameter_authentication_data_unavailable__too_much_number_of_requested_vectors
+        app_counterdb.incr("air:num_answers:authentication_data_unavailable")
         return r.authentication_data_unavailable(msg=msg, avp=request.requested_eutran_authentication_info_avp)
 
     # if is_resync_required(request):
@@ -164,6 +172,7 @@ def air(request: AIR) -> AIA:
     #: test__air_route__6__diameter_success__with_immediate_response_preferred_avp
     #: test__air_route__7__diameter_success__without_immediate_response_preferred_avp__number_of_requested_vectors_2
     #: test__air_route__8__diameter_success__without_immediate_response_preferred_avp__number_of_requested_vectors_3
+    app_counterdb.incr("air:num_answers:success")
     return r.success(auth_session_state=NO_STATE_MAINTAINED, authentication_info=authentication_info_data)
 
 
@@ -176,6 +185,7 @@ def nor(request: NOR) -> NOA:
 
     :returns: NotifyAnswer object
     """
+    app_counterdb.incr("nor:num_requests")
 
     hbh = request.header.hop_by_hop.hex()
     r = ResponseGenerator(request, proxy_response=app.s6a.NA)
@@ -188,11 +198,13 @@ def nor(request: NOR) -> NOA:
 
     except DiameterMissingAvp as e:
         #: test__nor_route__0__diameter_missing_user_name_avp
+        app_counterdb.incr("nor:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
     except DiameterInvalidAvpValue as e:
         #: test__nor_route__1__diameter_invalid_user_name_avp_value
+        app_counterdb.incr("nor:num_answers:invalid_avp_value")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.invalid_avp_value(msg=e.args[0], avp=request.user_name_avp)
 
@@ -202,6 +214,7 @@ def nor(request: NOR) -> NOA:
 
     if subscriber is None:
         #: test__nor_route__2__diameter_error_user_unknown
+        app_counterdb.incr("nor:num_answers:user_unknown")
         app_logger.debug(f"[{hbh}] Unknown subscriber: {imsi}")
         return r.user_unknown()
 
@@ -210,6 +223,7 @@ def nor(request: NOR) -> NOA:
     #: DIAMETER_ERROR_UNKNOWN_SERVING_NODE shall be returned.
     if is_new_mme_identity(request, subscriber):
         #: test__nor_route__3__diameter_error_unknown_serving_node
+        app_counterdb.incr("nor:num_answers:unknown_serving_node")
         app_logger.debug(f"[{hbh}] Unknown serving node: "\
                          f"{request.origin_host_avp.data.decode('utf-8')}")
         return r.unknown_serving_node()
@@ -225,6 +239,7 @@ def nor(request: NOR) -> NOA:
         app_logger.exception(f"[{hbh}] Update dynamic profile info")
 
     except DiameterMissingAvp as e:
+        app_counterdb.incr("nor:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to update MIP6-Agent-Info: {e.args[0]}")
 
         if e.args[0] == "MIP6-Agent-Info AVP not found":
@@ -240,6 +255,7 @@ def nor(request: NOR) -> NOA:
             return r.missing_avp(msg=e.args[0], avp=request.mip6_agent_info_avp)
 
     #: test__nor_route__4__diameter_success
+    app_counterdb.incr("nor:num_answers:success")
     return r.success()
 
 
@@ -252,6 +268,7 @@ def pur(request: PUR) -> PUA:
 
     :returns: PurgeUeAnswer object
     """
+    app_counterdb.incr("pur:num_requests")
 
     hbh = request.header.hop_by_hop.hex()
     r = ResponseGenerator(request, proxy_response=app.s6a.PUA)
@@ -264,11 +281,13 @@ def pur(request: PUR) -> PUA:
 
     except DiameterMissingAvp as e:
         #: test__pur_route__0__diameter_missing_user_name_avp
+        app_counterdb.incr("pur:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
     except DiameterInvalidAvpValue as e:
         #: test__pur_route__1__diameter_invalid_user_name_avp_value
+        app_counterdb.incr("pur:num_answers:invalid_avp_value")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.invalid_avp_value(msg=e.args[0], avp=request.user_name_avp)
 
@@ -279,6 +298,7 @@ def pur(request: PUR) -> PUA:
 
     if subscriber is None:
         #: test__pur_route__3__diameter_error_user_unknown
+        app_counterdb.incr("pur:num_answers:user_unknown")
         app_logger.debug(f"[{hbh}] Unknown subscriber: {imsi}")
         return r.user_unknown()
 
@@ -290,9 +310,11 @@ def pur(request: PUR) -> PUA:
                          f"serving node: "\
                          f"{request.origin_host_avp.data.decode('utf-8')}")
         #: test__pur_route__5__diameter_success_with_new_mme
+        app_counterdb.incr("pur:num_answers:success")
         return r.success(pua_flags=0x00000000)
 
     #: test__pur_route__4__diameter_success
+    app_counterdb.incr("pur:num_answers:success")
     return r.success(pua_flags=0x00000001)
 
 
@@ -305,6 +327,7 @@ def ulr(request: ULR) -> ULA:
 
     :returns: UpdateLocationAnswer object
     """
+    app_counterdb.incr("ulr:num_requests")
 
     hbh = request.header.hop_by_hop.hex()
     r = ResponseGenerator(request, proxy_response=app.s6a.ULA)
@@ -318,11 +341,13 @@ def ulr(request: ULR) -> ULA:
 
     except DiameterMissingAvp as e:
         #: test__ulr_route__0__diameter_missing_user_name_avp
+        app_counterdb.incr("ulr:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
     except DiameterInvalidAvpValue as e:
         #: test__ulr_route__1__diameter_invalid_user_name_avp_value
+        app_counterdb.incr("ulr:num_answers:invalid_avp_value")
         app_logger.exception(f"[{hbh}] Unable to get subscriber IMSI: {e.args[0]}")
         return r.invalid_avp_value(avp=request.user_name_avp, msg=e.args[0])
 
@@ -334,6 +359,7 @@ def ulr(request: ULR) -> ULA:
 
     except DiameterMissingAvp as e:
         #: test__ulr_route__5__diameter_missing_visited_plmn_id_avp
+        app_counterdb.incr("ulr:num_answers:missing_avp")
         app_logger.exception(f"[{hbh}] Unable to get visited PLMN: {e.args[0]}")
         return r.missing_avp(msg=e.args[0])
 
@@ -343,6 +369,7 @@ def ulr(request: ULR) -> ULA:
     #: DIAMETER_ERROR_RAT_NOT_ALLOWED shall be returned. 
     if not has_allowed_rat(request):
         #: test__ulr_route__2__diameter_rat_not_allowed
+        app_counterdb.incr("ulr:num_answers:rat_not_allowed")
         app_logger.debug(f"[{hbh}] Non-EUTRAN RAT type not allowed")
         return r.rat_not_allowed()
 
@@ -354,6 +381,7 @@ def ulr(request: ULR) -> ULA:
     #: DIAMETER_ERROR_USER_UNKNOWN shall be returned.
     if subscriber is None:
         #: test__ulr_route__3__diameter_error_user_unknown
+        app_counterdb.incr("ulr:num_answers:user_unknown")
         app_logger.debug(f"[{hbh}] Unknown subscriber: {imsi}")
         return r.user_unknown()
 
@@ -368,6 +396,8 @@ def ulr(request: ULR) -> ULA:
         if not subscriber.roaming_allowed and \
            is_subscriber_roaming(request, check_remote_realm=True):
    
+            app_counterdb.incr("ulr:num_answers:roaming_not_allowed")
+    
             if subscriber.odb == "ODB-all-APN":
                 #: test__ulr_route__7__diameter_error_roaming_not_allowed__odb_all_apn
                 app_logger.debug(f"[{hbh}] Subscriber cannot roam due barred (ODB-all-APN): {imsi}")
@@ -385,6 +415,7 @@ def ulr(request: ULR) -> ULA:
 
     except DiameterInvalidAvpValue as e:
         #: test__ulr_route__13__diameter_realm_not_served
+        app_counterdb.incr("ulr:num_answers:realm_not_served")
         app_logger.debug(f"[{hbh}] Found an invalid VPLMN realm: {e.args[0]}")
         return r.realm_not_served(e.args[0])
 
@@ -393,6 +424,7 @@ def ulr(request: ULR) -> ULA:
     #: the subscriber has not any APN configuration, the HSS shall return a 
     #: Result Code of DIAMETER_ERROR_UNKNOWN_EPS_SUBSCRIPTION. 
     if not subscriber.apns:
+        app_counterdb.incr("ulr:num_answers:unknown_eps_subscription")
         app_logger.debug(f"[{hbh}] Subscriber does not have APN configuration: {imsi}")
         return r.unknown_eps_subscription()
 
@@ -428,4 +460,5 @@ def ulr(request: ULR) -> ULA:
     #: test__ulr_route__10__diameter_success__odb_all_apn
     #: test__ulr_route__11__diameter_success__odb_hplmn_apn
     #: test__ulr_route__12__diameter_success__odb_vplmn_apn
+    app_counterdb.incr("ulr:num_answers:success")
     return r.success(subscription_data=create_subscription_data(subscriber))

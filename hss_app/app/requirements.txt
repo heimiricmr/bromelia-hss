@@ -1,5 +1,11 @@
+async-timeout==4.0.2
 bromelia==0.3.1
+Deprecated==1.2.13
+packaging==21.3
 psycopg2-binary==2.9.2
 pycrypto==2.6.1
+pyparsing==3.0.9
 PyYAML==6.0
+redis==4.3.4
 SQLAlchemy==1.4.27
+wrapt==1.14.1
