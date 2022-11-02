@@ -204,6 +204,17 @@ def get_eps_subscribers():
     return [ norm(subscriber.as_dict(relationship=True)) for subscriber in subscribers ]
 
 
+def delete_eps_subscriber(session, subscriber):
+    if subscriber is None:
+        raise UnknownSubscriber("Unknown subscriber")
+
+    for mip6s in subscriber.mip6s:
+        session.delete(mip6s)
+
+    session.delete(subscriber)
+    session.commit()
+
+
 def delete_eps_subscriber_by_imsi(imsi):
     with Session.begin() as session:
         subscriber = session.query(
@@ -212,14 +223,7 @@ def delete_eps_subscriber_by_imsi(imsi):
                 Subscriber.imsi==imsi
             ).one_or_none()
 
-        if subscriber is None:
-            raise UnknownSubscriber("Unknown subscriber")
-
-        for mip6s in subscriber.mip6s:
-            session.delete(mip6s)
-
-        session.delete(subscriber)
-        session.commit()
+        delete_eps_subscriber(session, subscriber)
 
 
 def delete_eps_subscriber_by_msisdn(msisdn):
@@ -230,8 +234,4 @@ def delete_eps_subscriber_by_msisdn(msisdn):
                 Subscriber.msisdn==msisdn
             ).one_or_none()
 
-        for mip6s in subscriber.mip6s:
-            session.delete(mip6s)
-
-        session.delete(subscriber)
-        session.commit()
+        delete_eps_subscriber(session, subscriber)
