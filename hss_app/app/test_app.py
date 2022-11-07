@@ -10,6 +10,7 @@
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -24,6 +25,16 @@ from bromelia.lib.etsi_3gpp_s6a import CLA # CancelLocationAnswer
 from bromelia.lib.etsi_3gpp_s6a import NOR # NotifyRequest
 from bromelia.lib.etsi_3gpp_s6a import ULR # UpdateLocationRequest
 from bromelia.exceptions import *
+
+app_dir = os.path.dirname(os.path.abspath(__file__))
+hss_app_dir = os.path.dirname(app_dir)
+bromelia_hss_dir = os.path.dirname(hss_app_dir)
+
+tests_dir = os.path.join(bromelia_hss_dir, "tests")
+
+sys.path.insert(0, tests_dir)
+
+from messages import Air, Nor, Pur, Ulr
 
 
 def hss_status_ok() -> bool:
@@ -153,20 +164,8 @@ class TestAirRoute(unittest.TestCase):
         r = requests.delete(f"{self.base_url_apn}/1")
 
     def test__air_route__0__diameter_missing_user_name_avp(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "99900000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
-        request.pop("user_name_avp")
-        aia = self.air(request)
+        #: Create Authentication-Information-Request with missing User-Name AVP
+        aia = self.air(request=Air.missing_user_name_avp())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -203,18 +202,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__1__diameter_invalid_user_name_avp_value(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "9990000000000",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
+        #: Create Authentication-Information-Request with invalid User-Name AVP value (less than 15 length digits)
+        request = Air.invalid_user_name_avp()
         aia = self.air(request)
 
         #: Diameter Header
@@ -256,20 +245,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__2__diameter_missing_visited_plmn_id_avp(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
-        request.pop("visited_plmn_id_avp")
-        aia = self.air(request)
+        #: Create Authentication-Information-Request with missing Visited-PLMN-Id AVP
+        aia = self.air(request=Air.missing_visited_plmn_id_avp())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -306,19 +283,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__3__diameter_error_user_unknown(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
-        aia = self.air(request)
+        #: Create Authentication-Information-Request with unknown user
+        aia = self.air(request=Air.error_user_unknown())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -351,18 +317,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__4__diameter_missing_requested_eutran_authentication_info_avp(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-        }
-        request = AIR(**air_avps)
-        aia = self.air(request)
+        #: Create Authentication-Information-Request with missing Requested-EUTRAN-Authentication-Info AVP
+        aia = self.air(request=Air.missing_requested_eutran_authentication_info_avp())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -399,18 +355,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__5__diameter_missing_number_of_requested_vectors_avp(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
+        #: Create Authentication-Information-Request with missing Number-Of-Requested-Vectors AVP
+        request = Air.missing_number_of_requested_vectors_avp()
         aia = self.air(request)
 
         #: Diameter Header
@@ -452,19 +398,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__6__diameter_success__with_immediate_response_preferred_avp(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(1)]
-        }
-        request = AIR(**air_avps)
-        aia = self.air(request)
+        #: Create a regular Authentication-Information-Request with Immediate-Response-Preferred AVP
+        aia = self.air(request=Air.with_immediate_response_preferred_avp())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -512,19 +447,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__7__diameter_success__without_immediate_response_preferred_avp__number_of_requested_vectors_2(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2)]
-        }
-        request = AIR(**air_avps)
-        aia = self.air(request)
+        #: Create a regular Authentication-Information-Request without Immediate-Response-Preferred AVP
+        aia = self.air(request=Air.without_immediate_response_preferred_avp())
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -576,19 +500,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__8__diameter_success__without_immediate_response_preferred_avp__number_of_requested_vectors_3(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(3)]
-        }
-        request = AIR(**air_avps)
-        aia = self.air(request)
+        #: Create a regular Authentication-Information-Request without Immediate-Response-Preferred AVP
+        aia = self.air(request=Air.without_immediate_response_preferred_avp(3))
 
         #: Diameter Header
         self.assertEqual(aia.header.version, DIAMETER_VERSION)
@@ -648,18 +561,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__9__diameter_authentication_data_unavailable__too_much_immediate_response_preferred(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(2), ImmediateResponsePreferredAVP(5)]
-        }
-        request = AIR(**air_avps)
+        #: Create a regular Authentication-Information-Request with too much Immediate-Response-Preferred AVPs
+        request = Air.too_much_immediate_response_preferred()
         aia = self.air(request)
 
         #: Diameter Header
@@ -701,18 +604,8 @@ class TestAirRoute(unittest.TestCase):
         cdb.decr("air:num_requests")
 
     def test__air_route__10__diameter_authentication_data_unavailable__too_much_number_of_requested_vectors(self):
-        air_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [VendorIdAVP(VENDOR_ID_3GPP), AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)],
-                    "requested_eutran_authentication_info": [NumberOfRequestedVectorsAVP(5)]
-        }
-        request = AIR(**air_avps)
+        #: Create a regular Authentication-Information-Request with too much Immediate-Response-Preferred AVPs
+        request = Air.too_much_number_of_requested_vectors()
         aia = self.air(request)
 
         #: Diameter Header
@@ -824,24 +717,8 @@ class TestNorRoute(unittest.TestCase):
         r = requests.delete(f"{self.base_url_apn}/1")
 
     def test__nor_route__0__diameter_missing_user_name_avp(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        request.pop("user_name_avp")
-        noa = self.nor(request)
+        #: Create Notify-Request with missing User-Name AVP
+        noa = self.nor(request=Nor.missing_user_name_avp())
 
         #: Diameter Header
         self.assertEqual(noa.header.version, DIAMETER_VERSION)
@@ -878,22 +755,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__1__diameter_invalid_user_name_avp_value(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "99900000000000",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)    
+        #: Create Notify-Request with missing User-Name AVP
+        request = Nor.invalid_user_name_avp()
         noa = self.nor(request)
 
         #: Diameter Header
@@ -920,7 +783,7 @@ class TestNorRoute(unittest.TestCase):
         self.assertEqual(noa.avps[5].dump().hex(), "00000128400000196570632e6d796e6574776f726b2e636f6d000000")
 
         self.assertEqual(noa.avps[6].code, FAILED_AVP_AVP_CODE)
-        self.assertEqual(noa.avps[6].dump().hex(), "0000011740000020000000014000001639393930303030303030303030300000")
+        self.assertEqual(noa.avps[6].dump().hex(), "0000011740000020000000014000001539393930303030303030303030000000")
         self.assertEqual(noa.avps[6].user_name_avp, request.user_name_avp)
 
         self.assertEqual(noa.avps[7].code, ERROR_MESSAGE_AVP_CODE)
@@ -935,23 +798,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__2__diameter_error_user_unknown(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        noa = self.nor(request)
+        #: Create Notify-Request with unknown user
+        noa = self.nor(request=Nor.error_user_unknown())
 
         #: Diameter Header
         self.assertEqual(noa.header.version, DIAMETER_VERSION)
@@ -988,52 +836,10 @@ class TestNorRoute(unittest.TestCase):
         #: a previous ULR procedure has been taken place. This is important
         #: since the last step of NOR route function is checking if there is
         #: a new MME hostname in NOR (differently from ULR's previous one)
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        ula = self.ulr(request=Ulr.regular())
 
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost2.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        noa = self.nor(request)
+        #: Create Notify-Request with unknown serving node (MME)
+        noa = self.nor(request=Nor.error_unknown_serving_node())
 
         #: Diameter Header
         self.assertEqual(noa.header.version, DIAMETER_VERSION)
@@ -1072,23 +878,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
     
     def test__nor_route__4__diameter_success(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        noa = self.nor(request)
+        #: Create a regular Notify-Request
+        noa = self.nor(request=Nor.regular())
 
         #: Diameter Header
         self.assertEqual(noa.header.version, DIAMETER_VERSION)
@@ -1121,25 +912,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__5__diameter_missing_mip6_agent_info_avp(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        request.pop("mip6_agent_info_avp")
-        request.refresh()
-        noa = self.nor(request)
+        #: Create Notify-Request with missing Mip6-Agent-Info AVP
+        noa = self.nor(request=Nor.missing_mip6_agent_info_avp())
 
         #: Diameter Header
         self.assertEqual(noa.header.version, DIAMETER_VERSION)
@@ -1176,24 +950,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__6__diameter_missing_mip6_agent_info_avp__mip_home_agent_host(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        request.mip6_agent_info_avp.pop("mip_home_agent_host_avp")
-        request.refresh()
+        #: Create Notify-Request with missing Mip-Home-Agent-Host AVP in Mip6-Agent-Info AVP
+        request = Nor.missing_mip_home_agent_host_avp()
         noa = self.nor(request)
 
         #: Diameter Header
@@ -1236,24 +994,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__7__diameter_missing_mip6_agent_info_avp__destination_host(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        request.mip6_agent_info_avp.mip_home_agent_host_avp.pop("destination_host_avp")
-        request.refresh()
+        #: Create Notify-Request with missing Destination-Host AVP in Mip-Home-Agent-Host AVP
+        request = Nor.missing_destination_host_in_mip6_agent_info_avp()
         noa = self.nor(request)
 
         #: Diameter Header
@@ -1296,24 +1038,8 @@ class TestNorRoute(unittest.TestCase):
         cdb.decr("nor:num_requests")
 
     def test__nor_route__8__diameter_missing_mip6_agent_info_avp__destination_realm(self):
-        nor_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "context_identifier": 3,
-                    "service_selection": "internet",
-                    "nor_flags": 0x00000000,
-                    "mip6_agent_info": [MipHomeAgentHostAVP([
-                                            DestinationRealmAVP("epc.mncXXX.mccYYY.3gppnetwork.org"),
-                                            DestinationHostAVP("topon.s5pgw.node.epc.mncXXX.mccYYY.3gppnetwork.org")
-                    ])]
-        }
-        request = NOR(**nor_avps)
-        request.mip6_agent_info_avp.mip_home_agent_host_avp.pop("destination_realm_avp")
-        request.refresh()
+        #: Create Notify-Request with missing Destination-Realm AVP in Mip-Home-Agent-Host AVP
+        request = Nor.missing_destination_realm_in_mip6_agent_info_avp()
         noa = self.nor(request)
 
         #: Diameter Header
@@ -1426,18 +1152,8 @@ class TestPurRoute(unittest.TestCase):
         r = requests.delete(f"{self.base_url_apn}/1")
 
     def test__pur_route__0__diameter_missing_user_name_avp(self):
-        pur_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "99900000000000",
-        }
-        request = PUR(**pur_avps)
-        request.pop("user_name_avp")
-    
-        pua = self.pur(request)
+        #: Create Purge-UE-Request with missing User-Name AVP
+        pua = self.pur(request=Pur.missing_user_name_avp())
 
         #: Diameter Header
         self.assertEqual(pua.header.version, DIAMETER_VERSION)
@@ -1474,15 +1190,8 @@ class TestPurRoute(unittest.TestCase):
         cdb.decr("pur:num_requests")
 
     def test__pur_route__1__diameter_invalid_user_name_avp_value(self):
-        pur_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "9990000000000",
-        }
-        request = PUR(**pur_avps)
+        #: Create Purge-UE-Request with invalid User-Name AVP value (less than 15 length digits)
+        request = Pur.invalid_user_name_avp()
         pua = self.pur(request)
 
         #: Diameter Header
@@ -1524,16 +1233,8 @@ class TestPurRoute(unittest.TestCase):
         cdb.decr("pur:num_requests")
 
     def test__pur_route__3__diameter_error_user_unknown(self):
-        pur_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-        }
-        request = PUR(**pur_avps)
-        pua = self.pur(request)
+        #: Create Purge-UE-Request with unknown user
+        pua = self.pur(request=Pur.error_user_unknown())
 
         #: Diameter Header
         self.assertEqual(pua.header.version, DIAMETER_VERSION)
@@ -1566,16 +1267,8 @@ class TestPurRoute(unittest.TestCase):
         cdb.decr("pur:num_requests")
 
     def test__pur_route__4__diameter_success(self):
-        pur_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-        }
-        request = PUR(**pur_avps)
-        pua = self.pur(request)
+        #: Create a regular Purge-UE-Request
+        pua = self.pur(request=Pur.regular())
 
         #: Diameter Header
         self.assertEqual(pua.header.version, DIAMETER_VERSION)
@@ -1615,45 +1308,10 @@ class TestPurRoute(unittest.TestCase):
         #: a previous ULR procedure has been taken place. This is important
         #: since the last step of PUR route function is checking if there is
         #: a new MME hostname in PUR (differently from ULR's previous one)
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        ula = self.ulr(request=Ulr.regular())
 
-        pur_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost2.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-        }
-        request = PUR(**pur_avps)
-        pua = self.pur(request)
+        #: Create Purge-UE-Request with unknown serving node (MME)
+        pua = self.pur(request=Pur.error_unknown_serving_node())
 
         #: Diameter Header
         self.assertEqual(pua.header.version, DIAMETER_VERSION)
@@ -1810,7 +1468,8 @@ class TestUlrRoute(unittest.TestCase):
         )
 
         #: Create Subscriber #2
-        content["identities"]["imsi"] = "999000000000002"
+        self.subscriber_with_odb_all_apn = "999000000000002"
+        content["identities"]["imsi"] = self.subscriber_with_odb_all_apn
         content["identities"]["msisdn"] = "5521000000002"
         content["subscription"]["odb"] = "ODB-all-APN"
 
@@ -1821,7 +1480,8 @@ class TestUlrRoute(unittest.TestCase):
         )
 
         #: Create Subscriber #3
-        content["identities"]["imsi"] = "999000000000003"
+        self.subscriber_with_odb_hplmn_apn = "999000000000003"
+        content["identities"]["imsi"] = self.subscriber_with_odb_hplmn_apn
         content["identities"]["msisdn"] = "5521000000003"
         content["subscription"]["odb"] = "ODB-HPLMN-APN"
 
@@ -1832,7 +1492,8 @@ class TestUlrRoute(unittest.TestCase):
         )
 
         #: Create Subscriber #4
-        content["identities"]["imsi"] = "999000000000004"
+        self.subscriber_with_odb_vplmn_apn = "999000000000004"
+        content["identities"]["imsi"] = self.subscriber_with_odb_vplmn_apn
         content["identities"]["msisdn"] = "5521000000004"
         content["subscription"]["odb"] = "ODB-VPLMN-APN"
 
@@ -1856,35 +1517,8 @@ class TestUlrRoute(unittest.TestCase):
         r = requests.delete(f"{self.base_url_apn}/824")
 
     def test__ulr_route__0__diameter_missing_user_name_avp(self):
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "99900000000000",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        request.pop("user_name_avp")
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with missing User-Name AVP
+        ula = self.ulr(request=Ulr.missing_user_name_avp())
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -1927,33 +1561,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__1__diameter_invalid_user_name_avp_value(self):
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "99900000000000",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
+        #: Create Update-Location-Request with invalid User-Name AVP value (less than 15 length digits)
+        request = Ulr.invalid_user_name_avp()
         ula = self.ulr(request)
 
         #: Diameter Header
@@ -1986,7 +1595,7 @@ class TestUlrRoute(unittest.TestCase):
         self.assertEqual(ula.avps[7].dump().hex(), "0000057ec0000010000028af00000001")
 
         self.assertEqual(ula.avps[8].code, FAILED_AVP_AVP_CODE)
-        self.assertEqual(ula.avps[8].dump().hex(), "0000011740000020000000014000001639393930303030303030303030300000")
+        self.assertEqual(ula.avps[8].dump().hex(), "0000011740000020000000014000001539393930303030303030303030000000")
         self.assertEqual(ula.avps[8].user_name_avp, request.user_name_avp)
 
         self.assertEqual(ula.avps[9].code, ERROR_MESSAGE_AVP_CODE)
@@ -2001,34 +1610,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__2__diameter_rat_not_allowed(self):
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "rat_type": RAT_TYPE_WLAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with RAT not allowed (WLAN)
+        ula = self.ulr(request=Ulr.rat_not_allowed())
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2067,34 +1650,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__3__diameter_error_user_unknown(self):
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000000",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with unknown user
+        ula = self.ulr(request=Ulr.error_user_unknown())
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2135,34 +1692,8 @@ class TestUlrRoute(unittest.TestCase):
     def test__ulr_route__4__diameter_success(self):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create a regular Update-Location-Request
+        ula = self.ulr(request=Ulr.regular())
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2314,34 +1845,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__5__diameter_missing_visited_plmn_id_avp(self):
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        request.pop("visited_plmn_id_avp")
+        #: Create Update-Location-Request with missing Visited-PLMN-Id AVP
+        request = Ulr.missing_visited_plmn_id_avp()
         ula = self.ulr(request)
 
         #: Diameter Header
@@ -2388,64 +1893,10 @@ class TestUlrRoute(unittest.TestCase):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
         #: 1st ULR
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        ula = self.ulr(request=Ulr.regular())
 
         #: 2nd ULR with different Origin-Host AVP value
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost2.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        ula = self.ulr(request=Ulr.regular(origin_host="localhost2.domain"))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2477,34 +1928,7 @@ class TestUlrRoute(unittest.TestCase):
         self.assertEqual(ula.avps[7].dump().hex(), "0000057ec0000010000028af00000001")
 
         #: 3rd ULR with same Origin-Host AVP value observed in the 1st ULR
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000001",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        ula = self.ulr(request=Ulr.regular())
 
         #: Check if Cache has been updated
         self.assertEqual(cdb.get("ulr:num_answers:success"), b'3')
@@ -2514,34 +1938,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests", 3)
 
     def test__ulr_route__7__diameter_error_roaming_not_allowed__odb_all_apn(self):
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc001.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc001.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000002",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with Roamning not allowed due to subscriber provisioned with ODB-all-APN
+        ula = self.ulr(request=Ulr.roaming_not_allowed(self.subscriber_with_odb_all_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2584,34 +1982,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__8__diameter_error_roaming_not_allowed__odb_hplmn_apn(self):
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc001.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc001.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000003",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with Roamning not allowed due to subscriber provisioned with ODB-HPLMN-APN
+        ula = self.ulr(request=Ulr.roaming_not_allowed(self.subscriber_with_odb_hplmn_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2654,34 +2026,8 @@ class TestUlrRoute(unittest.TestCase):
         cdb.decr("ulr:num_requests")
 
     def test__ulr_route__9__diameter_error_roaming_not_allowed__odb_vplmn_apn(self):
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc001.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc001.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000004",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with Roamning not allowed due to subscriber provisioned with ODB-VPLMN-APN
+        ula = self.ulr(request=Ulr.roaming_not_allowed(self.subscriber_with_odb_vplmn_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2726,34 +2072,8 @@ class TestUlrRoute(unittest.TestCase):
     def test__ulr_route__10__diameter_success__odb_all_apn(self):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc000.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000002",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create a regular Update-Location-Request with subscriber provisioned with ODB-all-APN
+        ula = self.ulr(request=Ulr.regular_with_odb(user_name=self.subscriber_with_odb_all_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -2909,34 +2229,8 @@ class TestUlrRoute(unittest.TestCase):
     def test__ulr_route__11__diameter_success__odb_hplmn_apn(self):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc000.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000003",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create a regular Update-Location-Request with subscriber provisioned with ODB-HPLMN-APN
+        ula = self.ulr(request=Ulr.regular_with_odb(user_name=self.subscriber_with_odb_hplmn_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -3093,34 +2387,8 @@ class TestUlrRoute(unittest.TestCase):
     def test__ulr_route__12__diameter_success__odb_vplmn_apn(self):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
-        ulr_avps = {
-                    "session_id": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_host": "localhost.mnc000.mcc999.3gppnetwork.org",
-                    "origin_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_realm": "mnc000.mcc999.3gppnetwork.org",
-                    "destination_host": "remotehost.mnc000.mcc999.3gppnetwork.org",
-                    "user_name": "999000000000004",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create a regular Update-Location-Request with subscriber provisioned with ODB-VPLMN-APN
+        ula = self.ulr(request=Ulr.regular_with_odb(user_name=self.subscriber_with_odb_vplmn_apn))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
@@ -3277,34 +2545,8 @@ class TestUlrRoute(unittest.TestCase):
     def test__ulr_route__13__diameter_realm_not_served(self):
         app.testing_answer = CLA(result_code=DIAMETER_SUCCESS)
 
-        ulr_avps = {
-                    "session_id": "localhost.domain",
-                    "origin_host": "localhost.domain",
-                    "origin_realm": "domain",
-                    "destination_realm": "domain2",
-                    "destination_host": "remotehost.domain",
-                    "user_name": "999000000000004",
-                    "rat_type": RAT_TYPE_EUTRAN,
-                    "ulr_flags": 3,
-                    "visited_plmn_id": bytes.fromhex("09f107"),
-                    "vendor_specific_application_id": [
-                                                            VendorIdAVP(VENDOR_ID_3GPP), 
-                                                            AuthApplicationIdAVP(DIAMETER_APPLICATION_S6a)
-                    ],
-                    "supported_features": [
-                                                VendorIdAVP(VENDOR_ID_3GPP), 
-                                                FeatureListIdAVP(1), 
-                                                FeatureListAVP(0xdc000200)
-                    ],
-                    "terminal_information": [
-                                                ImeiAVP("123456789000000"),
-                                                SoftwareVersionAVP("12")
-                    ],
-                    "ue_srvcc_capability": UE_SRVCC_SUPPORTED,
-                    "homogeneous_support_of_ims_voice_over_ps_sessions": IMS_VOICE_OVER_PS_SUPPORTED,
-        }
-        request = ULR(**ulr_avps)
-        ula = self.ulr(request)
+        #: Create Update-Location-Request with realm not served
+        ula = self.ulr(request=Ulr.realm_not_served("999000000000004"))
 
         #: Diameter Header
         self.assertEqual(ula.header.version, DIAMETER_VERSION)
