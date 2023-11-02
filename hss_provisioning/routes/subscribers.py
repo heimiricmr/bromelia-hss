@@ -127,9 +127,14 @@ def api_get_subscribers():
 
 @bp.route("/subscribers/imsi/<imsi>", methods=["DELETE"])
 def api_delete_subscriber_by_imsi(imsi):
-    return process_delete_request(imsi, delete_eps_subscriber_by_imsi)
-
+    try:
+        return process_delete_request(imsi, delete_eps_subscriber_by_imsi)
+    except UnknownSubscriber:
+        return Response.resource_not_found()
 
 @bp.route("/subscribers/msisdn/<msisdn>", methods=["DELETE"])
 def api_delete_subscriber_by_msisdn(msisdn):
-    return process_delete_request(msisdn, delete_eps_subscriber_by_msisdn)
+    try:
+        return process_delete_request(msisdn, delete_eps_subscriber_by_msisdn)
+    except UnknownSubscriber:
+        return Response.resource_not_found()

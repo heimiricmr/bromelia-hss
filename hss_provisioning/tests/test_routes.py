@@ -1232,14 +1232,51 @@ class TestApnLifecycle(unittest.TestCase):
 # @unittest.skip
 class TestSubscriberLifecycle(unittest.TestCase):
     def setUp(self):
-        self.base_url = "http://localhost:5001/subscribers"
+        self.base_url = "http://localhost:5001"
+
+        self.apn_id = 1
+        resource_url = f"{self.base_url}/apns"
+
+        content = {
+            "apn_id": self.apn_id,
+            "apn_name": "internet",
+            "pdn_type": "IPv4v6",
+            "qci": 9,
+            "priority_level": 8,
+            "max_req_bw_ul": 999999999,
+            "max_req_bw_dl": 999999999
+        }
+
+        #: Create APN
+        r = requests.post(
+            resource_url, 
+            data=json.dumps(content), 
+            headers={"Content-Type": "application/json"}
+        )
+        self.assertEqual(r.status_code, HTTP_201_CREATED)
+
+        #: Read APN
+        resource_url = f"{self.base_url}/apns/{self.apn_id}"
+        r = requests.get(resource_url)
+
+        r_content = json.loads(r.content.decode("utf-8"))
+        r_content.pop("id")
+
+        self.assertEqual(r.status_code, HTTP_200_OK)
+        self.assertEqual(r_content, content)
+
+    def tearDown(self):
+        #: Delete APN
+        resource_url = f"{self.base_url}/apns/{self.apn_id}"
+        r = requests.delete(resource_url)
+        self.assertEqual(r.status_code, HTTP_204_NO_CONTENT)
 
     def test__only_one_subscriber(self):
         #: Setup variables
         imsi = "999000000000999"
         msisdn = "5521000000999"
 
-        resource_url = f"{self.base_url}/imsi/{imsi}"
+        resource_url = f"{self.base_url}/subscribers"
 
         content = {
             "identities": {
@@ -1268,13 +1305,14 @@ class TestSubscriberLifecycle(unittest.TestCase):
 
         #: Create Subscriber
         r = requests.post(
-            self.base_url, 
+            resource_url, 
             data=json.dumps(content), 
             headers={"Content-Type": "application/json"}
         )
         self.assertEqual(r.status_code, HTTP_201_CREATED)
 
         #: Read Subscriber
+        resource_url = f"{self.base_url}/subscribers/imsi/{imsi}"
         r = requests.get(resource_url)
 
         r_content = json.loads(r.content.decode("utf-8"))
@@ -1284,5 +1322,6 @@ class TestSubscriberLifecycle(unittest.TestCase):
         # self.assertEqual(r_content, content)
 
         #: Delete Subscriber
+        resource_url = f"{self.base_url}/subscribers/imsi/{imsi}"
         r = requests.delete(resource_url)
         self.assertEqual(r.status_code, HTTP_204_NO_CONTENT)
