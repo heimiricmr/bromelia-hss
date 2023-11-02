@@ -6,7 +6,7 @@ WORKDIR /home/hss
 
 RUN apt-get update && apt-get install -y \
   libpq-dev \
-  python-dev \
+  python-dev-is-python3 \
   gcc \
   && rm -rf /var/lib/apt/lists/*
 
