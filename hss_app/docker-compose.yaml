@@ -15,6 +15,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./app/config_docker.yaml:/home/hss/config.yaml
     ports:
       - "3870:3870"
     depends_on:
