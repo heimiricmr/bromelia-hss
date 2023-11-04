@@ -40,3 +40,6 @@ logs
 # Redis data
 cache
 *.rdb
+
+# Zabbix (zabbix-docker)
+zabbix-docker
