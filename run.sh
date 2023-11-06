@@ -32,13 +32,22 @@ buildAndRunBromeliaHss() {
     cd ..
 }
 
+buildAndRunBromeliaHssWithZabbix() {
+    echo -e "${GREEN}$(date +%d/%m/%Y) - $(date +%T) - Build & Run Bromélia HSS with Zabbix${NC}"
+    echo
+
+    cd hss_app
+    docker-compose -f docker-compose.zabbix.yaml up -d --build
+    cd ..
+}
+
 includeZabbixInstallation() {
     echo -e "${YELLOW}$(date +%d/%m/%Y) - $(date +%T) - Start Bromélia HSS installation ${NC}"
     echo
 
     cloneZabbix
     buildAndRunZabbix
-    buildAndRunBromeliaHss
+    buildAndRunBromeliaHssWithZabbix
 
     echo -e "${YELLOW}$(date +%d/%m/%Y) - $(date +%T) - End Bromélia HSS installation ${NC}"
     exit 1
@@ -56,7 +65,7 @@ defaultInstallation() {
 
 main() {
     echo $1
-    #: Installation which includes Zabbix
+    #: Bromélia installation with Zabbix
     if [[ "$1" == "include-zabbix" ]]; then
         includeZabbixInstallation
     fi

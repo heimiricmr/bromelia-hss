@@ -81,6 +81,7 @@ services:
       - cache
     networks:
       - network
+      - zabbix-docker_zbx_net_backend
 
   provisioning_app:
       build: ../hss_provisioning/
@@ -101,3 +102,5 @@ services:
 
 networks:
   network: {}
+  zabbix-docker_zbx_net_backend:
+    external: true
